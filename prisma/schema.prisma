@@ -1,13 +1,227 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
+// This is your Prisma schema file
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  phone         String?
+  image         String?
+  passwordHash  String?
+  role          Role      @default(EXPOSANT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  reservations Reservation[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Event {
+  id                    String      @id @default(cuid())
+  name                  String
+  date                  DateTime
+  location              String
+  description           String?     @db.Text
+  backgroundImageUrl    String?
+  status                EventStatus @default(DRAFT)
+  reservationDeadline   DateTime?
+  capacity              Int?
+  choiceSupplement      Float       @default(5.0)
+  onlinePaymentEnabled  Boolean     @default(true)
+  cancellationWindowDays Int        @default(7)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  zones        Zone[]
+  spots        Spot[]
+  reservations Reservation[]
+
+  @@map("events")
+}
+
+model Zone {
+  id            String   @id @default(cuid())
+  eventId       String
+  name          String
+  color         String   @default("#3B82F6")
+  priceModifier Float    @default(0.0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  event Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  spots Spot[]
+
+  @@map("zones")
+}
+
+model Spot {
+  id        String     @id @default(cuid())
+  eventId   String
+  zoneId    String
+  label     String
+  position  Int
+  x         Float
+  y         Float
+  width     Float
+  height    Float
+  rotation  Float      @default(0)
+  type      SpotType   @default(STANDARD)
+  basePrice Float      @default(10.0)
+  hasElectricity Boolean @default(false)
+  hasTable       Boolean @default(false)
+  hasShelter     Boolean @default(false)
+  allowsVehicle  Boolean @default(false)
+  status    SpotStatus @default(AVAILABLE)
+  heldUntil DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  event            Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  zone             Zone               @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  reservationSpots ReservationSpot[]
+
+  @@map("spots")
+}
+
+model Reservation {
+  id               String            @id @default(cuid())
+  eventId          String
+  userId           String
+  mode             ReservationMode   @default(AUTO)
+  choiceSupplement Float             @default(0)
+  totalPrice       Float
+  status           ReservationStatus @default(PENDING)
+  heldUntil        DateTime?
+  qrToken          String?           @unique @default(cuid())
+  checkedInAt      DateTime?
+  notes            String?           @db.Text
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  event   Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spots   ReservationSpot[]
+  payment Payment?
+
+  @@map("reservations")
+}
+
+model ReservationSpot {
+  id            String @id @default(cuid())
+  reservationId String
+  spotId        String
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  spot        Spot        @relation(fields: [spotId], references: [id], onDelete: Cascade)
+
+  @@unique([reservationId, spotId])
+  @@map("reservation_spots")
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  reservationId         String        @unique
+  provider              String        @default("stripe")
+  amount                Float
+  status                PaymentStatus @default(PENDING)
+  stripePaymentIntentId String?
+  stripeSessionId       String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+enum Role {
+  ADMIN
+  EXPOSANT
+}
+
+enum EventStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum SpotType {
+  STANDARD
+  PREMIUM
+  VEHICLE
+}
+
+enum SpotStatus {
+  AVAILABLE
+  HELD
+  RESERVED
+}
+
+enum ReservationMode {
+  AUTO
+  CHOSEN
+}
+
+enum ReservationStatus {
+  PENDING
+  HELD
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
 }
