@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import Link from "next/link";
 
 export default async function AdminEventsPage() {
   const session = await auth();
@@ -15,9 +16,9 @@ export default async function AdminEventsPage() {
           <h1 className="text-2xl font-bold text-amber-800">Événements</h1>
           <p className="text-gray-500">Gérez vos brocantes et vide-greniers</p>
         </div>
-        <button className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium">
+        <Link href="/admin/events/new" className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium">
           + Nouvel événement
-        </button>
+        </Link>
       </div>
 
       {events.length === 0 ? (
@@ -33,9 +34,10 @@ export default async function AdminEventsPage() {
       ) : (
         <div className="space-y-4">
           {events.map((event) => (
-            <div
+            <Link
               key={event.id}
-              className="bg-white rounded-xl border border-amber-100 p-6 flex items-center justify-between"
+              href={`/admin/events/${event.id}`}
+              className="bg-white rounded-xl border border-amber-100 p-6 flex items-center justify-between hover:border-amber-300 transition-colors"
             >
               <div>
                 <h3 className="font-semibold text-gray-800">{event.name}</h3>
@@ -59,7 +61,7 @@ export default async function AdminEventsPage() {
                     ? "Brouillon"
                     : "Fermé"}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       )}
