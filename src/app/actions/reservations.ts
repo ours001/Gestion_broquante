@@ -173,7 +173,7 @@ export async function holdSpotsAction(
   }
 }
 
-// Confirm a held reservation (placeholder for M4 — sets CONFIRMED without payment)
+// Confirm a held reservation without payment (direct confirmation path)
 export async function confirmReservationAction(
   reservationId: string
 ): Promise<{ ok: boolean; error?: string }> {
@@ -206,6 +206,31 @@ export async function confirmReservationAction(
     });
 
     revalidatePath("/dashboard/reservations");
+
+    // Send confirmation email after the transaction
+    const fullReservation = await db.reservation.findUnique({
+      where: { id: reservationId },
+      include: {
+        event: true,
+        spots: { include: { spot: true } },
+        user: true,
+      },
+    });
+
+    if (fullReservation?.user.email) {
+      await sendReservationConfirmationEmail({
+        to: fullReservation.user.email,
+        userName: fullReservation.user.name,
+        eventName: fullReservation.event.name,
+        eventDate: fullReservation.event.date,
+        eventLocation: fullReservation.event.location,
+        spotLabels: fullReservation.spots.map((rs) => rs.spot.label),
+        totalPrice: fullReservation.totalPrice,
+        qrToken: fullReservation.qrToken!,
+        reservationId: fullReservation.id,
+      });
+    }
+
     return { ok: true };
   } catch (err: unknown) {
     if (err instanceof Error) {
