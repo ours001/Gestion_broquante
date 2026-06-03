@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { nanoid } from "nanoid";
 import type { Prisma } from "@prisma/client";
+import { sendReservationConfirmationEmail } from "@/lib/email";
 
 const HOLD_MINUTES = 10;
 

@@ -6,6 +6,7 @@ import {
   confirmReservationAction,
   validateConsecutiveSelectionAction,
 } from "@/app/actions/reservations";
+import { createCheckoutSessionAction } from "@/app/actions/payments";
 import { SpotPicker } from "./spot-picker";
 import { formatPrice } from "@/lib/utils";
 
@@ -111,13 +112,24 @@ export function ReservationWizard({
         setError(result.error);
         return;
       }
-      // If no online payment (M4), confirm immediately
-      const confirm = await confirmReservationAction(result.reservationId);
-      if (!confirm.ok) {
-        setError(confirm.error ?? "Erreur confirmation");
-        return;
+
+      if (event.onlinePaymentEnabled) {
+        // Redirect to Stripe Checkout
+        const checkout = await createCheckoutSessionAction(result.reservationId);
+        if (!checkout.ok) {
+          setError(checkout.error);
+          return;
+        }
+        window.location.href = checkout.url;
+      } else {
+        // No payment — confirm directly
+        const confirm = await confirmReservationAction(result.reservationId);
+        if (!confirm.ok) {
+          setError(confirm.error ?? "Erreur confirmation");
+          return;
+        }
+        setStep("success");
       }
-      setStep("success");
     });
   };
 
