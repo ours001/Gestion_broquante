@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import Link from "next/link";
 import { formatDate, formatPrice } from "@/lib/utils";
+import { EventStatusButtons } from "@/components/admin/event-status-buttons";
 
 export default async function AdminEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -55,6 +56,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
           className="bg-white border border-amber-200 text-amber-700 px-5 py-2.5 rounded-lg hover:bg-amber-50 transition-colors font-medium">
           📋 Réservations
         </Link>
+        <EventStatusButtons eventId={id} currentStatus={event.status} />
       </div>
     </main>
   );
